@@ -147,6 +147,12 @@ def _sync_file(file_path: Path, watch_folder: Path, settings) -> bool:
     current_mtime = int(stat.st_mtime)
     current_size = stat.st_size
 
+    # Skip files larger than 500 MB to avoid OOM issues
+    MAX_FILE_SIZE = 500 * 1024 * 1024
+    if current_size > MAX_FILE_SIZE:
+        err_console.print(f"[yellow]Skipping {file_path.name}:[/yellow] file exceeds 500 MB limit.")
+        return False
+
     session = get_session()
     try:
         existing = session.query(SyncedFile).filter_by(local_path=str(file_path)).first()

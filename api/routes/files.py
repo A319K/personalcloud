@@ -85,8 +85,8 @@ def delete_file(
     # Delete from storage backend
     try:
         storage.delete_file(file_record.storage_key)
-    except StorageError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except StorageError:
+        raise HTTPException(status_code=500, detail="Failed to delete file from storage.")
 
     # Delete DB record (cascade removes FileEmbedding too)
     db.delete(file_record)

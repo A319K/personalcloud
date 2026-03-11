@@ -28,7 +28,7 @@ def _get_db():
 
 @router.get("/", summary="Semantic search across all synced files")
 def search_files(
-    q: str = Query(..., description="Natural language search query"),
+    q: str = Query(..., max_length=500, description="Natural language search query"),
     top_k: int = Query(5, ge=1, le=50, description="Number of results to return"),
     db: Session = Depends(_get_db),
 ) -> dict:
@@ -54,8 +54,8 @@ def search_files(
 
     try:
         results = semantic_search(session=db, query=q, top_k=top_k)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search failed: {e}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Search failed. Please try again.")
 
     return {
         "query": q,
