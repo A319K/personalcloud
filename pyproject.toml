@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "personalcloud"
+version = "1.0.0"
+description = "Self-hosted AI-powered personal cloud backup and search CLI"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[project.scripts]
+personalcloud = "cli.main:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cli*", "api*", "db*", "config*"]
