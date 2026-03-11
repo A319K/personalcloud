@@ -56,6 +56,7 @@ cp .env.example .env
 ### 3. Install the CLI
 
 ```bash
+pip install --upgrade setuptools
 pip install -e .
 ```
 
