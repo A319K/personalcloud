@@ -53,14 +53,24 @@ cd personalcloud
 cp .env.example .env
 ```
 
-### 3. Install the CLI
+### 3. Create a virtual environment
+
+Use Python 3.11 specifically — newer versions (3.12+) are not compatible with all dependencies.
+
+```bash
+/Library/Frameworks/Python.framework/Versions/3.11/bin/python3.11 -m venv .venv
+source .venv/bin/activate
+```
+
+### 4. Install the CLI
 
 ```bash
 pip install --upgrade setuptools
+pip install -r requirements.txt
 pip install -e .
 ```
 
-### 4. Run the setup wizard
+### 5. Run the setup wizard
 
 ```bash
 personalcloud init
@@ -73,13 +83,13 @@ This wizard will ask you:
 
 It then creates all database tables automatically.
 
-### 5. Start MinIO (if using local storage)
+### 6. Start MinIO (if using local storage)
 
 ```bash
 docker compose up -d
 ```
 
-### 6. Sync your files
+### 7. Sync your files
 
 ```bash
 personalcloud sync
