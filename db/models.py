@@ -60,9 +60,13 @@ class SyncedFile(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    # Relationship to embedding (one-to-one)
-    embedding = relationship(
-        "FileEmbedding", back_populates="file", uselist=False, cascade="all, delete-orphan"
+    # Relationship to embedding chunks (one-to-many after chunking migration)
+    chunks = relationship(
+        "FileEmbedding",
+        back_populates="file",
+        uselist=True,
+        order_by="FileEmbedding.chunk_index",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:
@@ -71,19 +75,28 @@ class SyncedFile(Base):
 
 class FileEmbedding(Base):
     """
-    Stores the sentence-transformer embedding and extracted text for a synced file.
+    Stores one embedding chunk for a synced file.
 
-    The vector column is 384-dimensional, matching the all-MiniLM-L6-v2 model output.
+    A single file may have multiple rows (chunk_index 0, 1, 2…) so that long
+    documents are fully covered. The model input limit (~256 tokens / ~1000 chars)
+    means a single embedding only captures the first ~1000 chars of a file;
+    chunking ensures content deeper in the document is searchable.
     """
 
     __tablename__ = "file_embeddings"
+    __table_args__ = (
+        UniqueConstraint("file_id", "chunk_index", name="uq_file_chunk"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # FK to the parent synced file
-    file_id = Column(Integer, ForeignKey("synced_files.id", ondelete="CASCADE"), nullable=False, unique=True)
+    file_id = Column(Integer, ForeignKey("synced_files.id", ondelete="CASCADE"), nullable=False)
 
-    # Raw extracted text (truncated to first ~2000 chars for snippet display)
+    # 0-based position of this chunk within the file
+    chunk_index = Column(Integer, nullable=False, default=0)
+
+    # Raw text of this chunk (stored as-is for snippet display, without filename prefix)
     extracted_text = Column(Text, nullable=True)
 
     # 384-dimensional embedding vector from all-MiniLM-L6-v2
@@ -93,7 +106,7 @@ class FileEmbedding(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Back-reference to SyncedFile
-    file = relationship("SyncedFile", back_populates="embedding")
+    file = relationship("SyncedFile", back_populates="chunks")
 
     def __repr__(self) -> str:
-        return f"<FileEmbedding file_id={self.file_id}>"
+        return f"<FileEmbedding file_id={self.file_id} chunk={self.chunk_index}>"

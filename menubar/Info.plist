@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Hides the app from the Dock and App Switcher — menu bar only -->
+    <key>LSUIElement</key>
+    <true/>
+
+    <key>CFBundleName</key>
+    <string>personalcloud</string>
+
+    <key>CFBundleDisplayName</key>
+    <string>personalcloud</string>
+
+    <key>CFBundleIdentifier</key>
+    <string>com.personalcloud.menubar</string>
+
+    <key>CFBundleVersion</key>
+    <string>1</string>
+
+    <key>CFBundleShortVersionString</key>
+    <string>2.0</string>
+
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <key>CFBundleExecutable</key>
+    <string>personalcloud</string>
+
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+
+    <key>NSHighResolutionCapable</key>
+    <true/>
+
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+
+    <!-- Required for global keyboard monitoring -->
+    <key>NSAppleEventsUsageDescription</key>
+    <string>personalcloud uses Accessibility to register a global search hotkey.</string>
+
+    <key>NSAccessibilityUsageDescription</key>
+    <string>personalcloud needs Accessibility access to register a system-wide search hotkey (Cmd+Shift+F).</string>
+
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+</dict>
+</plist>

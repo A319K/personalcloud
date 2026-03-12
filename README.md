@@ -207,10 +207,44 @@ API_PORT=8000
 
 ---
 
-## Coming Soon
+---
 
-### Phase 2 — Mac Menu Bar App
-A native macOS menu bar companion that shows sync status, triggers manual syncs, and lets you search from anywhere on your desktop — no terminal required.
+## Phase 2 — Mac Menu Bar App
+
+A native Swift/SwiftUI menu bar app that wraps the Phase 1 backend with a full GUI — no terminal required.
+
+### Quickstart
+
+**1. Start the Phase 1 backend:**
+```bash
+source .venv/bin/activate
+uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+
+**2. Open the Xcode project:**
+```bash
+open menubar/personalcloud.xcodeproj
+```
+
+**3. Build and run:** `Cmd+R` in Xcode 15+
+
+**First launch:** Grant Accessibility permission when prompted (System Settings → Privacy & Security → Accessibility). This enables the global hotkey.
+
+### Phase 2 Features
+
+| Feature | Details |
+|---------|---------|
+| Menu bar icon | Cloud icon — changes appearance when watcher is active or backend is offline |
+| Dropdown | Sync status (last synced, file count, storage), watcher toggle, quick actions |
+| Global hotkey | `Cmd+Shift+F` opens Spotlight-style floating search (configurable) |
+| Search | Debounced semantic search with keyboard navigation (↑↓ arrows, Enter to open) |
+| File preview | Hover a result for 500ms to see metadata + text preview panel |
+| Settings | Hotkey recorder, watch folder picker, backend URL, launch at login |
+| Backend offline | Detected automatically with a "Start Backend" button |
+
+---
+
+## Coming Soon
 
 ### Phase 3 — Web UI + Mobile
 A web dashboard for browsing and searching your files from any browser, plus a mobile app (iOS/Android) for on-the-go access to your personal cloud.

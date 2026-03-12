@@ -11,6 +11,7 @@ from rich.console import Console
 
 from api.routes.files import router as files_router
 from api.routes.search import router as search_router
+from api.routes.status import router as status_router
 
 console = Console(stderr=True)
 
@@ -48,6 +49,7 @@ app = FastAPI(
 # Mount routers
 app.include_router(files_router)
 app.include_router(search_router)
+app.include_router(status_router)
 
 
 @app.get("/", tags=["health"])

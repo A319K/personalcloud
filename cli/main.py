@@ -119,7 +119,7 @@ def _sync_file(file_path: Path, watch_folder: Path, settings) -> bool:
     Sync a single file: upload to storage, extract text, store embedding.
 
     Checks whether the file has changed since last sync using its last-modified
-    timestamp. Skips unchanged files to avoid redundant work.
+    timestamp. Skips unchanged files, excluded paths, and junk filenames.
 
     Args:
         file_path: Absolute path to the file to sync.
@@ -133,8 +133,13 @@ def _sync_file(file_path: Path, watch_folder: Path, settings) -> bool:
     from db.models import SyncedFile
     from api.services.storage import StorageService, StorageError
     from api.services.ocr import extract_text
-    from api.services.embeddings import generate_embedding, store_embedding
+    from api.services.embeddings import store_chunks
+    from api.services.watcher import is_excluded
     from datetime import datetime
+
+    # Skip files inside excluded directories or with junk filenames
+    if is_excluded(str(file_path), settings.EXCLUDE_PATHS):
+        return False
 
     # Compute storage key relative to the watch folder
     try:
@@ -168,9 +173,6 @@ def _sync_file(file_path: Path, watch_folder: Path, settings) -> bool:
         # Extract text from the file
         text = extract_text(file_path)
 
-        # Generate embedding
-        embedding_vector = generate_embedding(text)
-
         if existing:
             # Update existing record
             existing.storage_key = storage_key
@@ -193,8 +195,8 @@ def _sync_file(file_path: Path, watch_folder: Path, settings) -> bool:
             session.commit()
             file_id = new_file.id
 
-        # Store or update embedding
-        store_embedding(session, file_id, text, embedding_vector)
+        # Split into 800-char overlapping chunks and store one embedding per chunk
+        store_chunks(session, file_id, text, file_path.name)
         return True
 
     except StorageError as e:
@@ -359,10 +361,13 @@ def sync() -> None:
         err_console.print(f"[red]✗[/red] Watch folder not found: {watch_folder}")
         raise typer.Exit(1)
 
-    # Collect all files with supported extensions
+    # Collect all files with supported extensions, pre-filtering excluded paths
+    from api.services.watcher import is_excluded
     all_files: list[Path] = []
     for ext in settings.SUPPORTED_EXTENSIONS:
-        all_files.extend(watch_folder.rglob(f"*{ext}"))
+        for f in watch_folder.rglob(f"*{ext}"):
+            if not is_excluded(str(f), settings.EXCLUDE_PATHS):
+                all_files.append(f)
 
     if not all_files:
         console.print("[yellow]No supported files found in watch folder.[/yellow]")
@@ -583,6 +588,70 @@ def list_files() -> None:
     console.print()
     console.print(table)
     console.print()
+
+
+@app.command()
+def clean(
+    confirm: bool = typer.Option(False, "--confirm", help="Required flag to prevent accidental runs."),
+) -> None:
+    """
+    Remove junk files from the database index (does NOT delete files from disk or storage).
+
+    Purges any indexed entries whose paths contain an EXCLUDE_PATHS directory segment
+    (e.g. node_modules, .venv, __pycache__) or whose filenames match known noise patterns
+    (LICENSE, NOTICE, CHANGELOG, *.LICENSE.txt, etc.).
+
+    Requires --confirm to prevent accidental data loss.
+    """
+    if not confirm:
+        err_console.print(
+            "[red]✗[/red] This command requires [bold]--confirm[/bold] to run.\n"
+            "  Usage: [bold]personalcloud clean --confirm[/bold]"
+        )
+        raise typer.Exit(1)
+
+    _ensure_configured()
+    settings = _load_settings()
+
+    from db.database import get_session
+    from db.models import SyncedFile, FileEmbedding
+    from api.services.watcher import is_excluded
+
+    session = get_session()
+    try:
+        # Load all indexed files and decide which to remove in Python so we reuse
+        # the same is_excluded() logic that governs sync — no duplicated SQL heuristics.
+        all_records = session.query(SyncedFile).all()
+
+        to_delete: list[SyncedFile] = [
+            record for record in all_records
+            if is_excluded(record.local_path, settings.EXCLUDE_PATHS)
+        ]
+
+        if not to_delete:
+            console.print("[green]✓[/green] Index is already clean — no junk files found.")
+            return
+
+        removed = 0
+        for record in to_delete:
+            # FileEmbedding is deleted automatically via CASCADE (FK relationship),
+            # but we delete it explicitly here in case the DB was created without
+            # the cascade constraint set up properly.
+            embedding = session.query(FileEmbedding).filter_by(file_id=record.id).first()
+            if embedding:
+                session.delete(embedding)
+            session.delete(record)
+            removed += 1
+
+        session.commit()
+        console.print(f"[green]✓[/green] Removed [bold]{removed}[/bold] file(s) from index.")
+
+    except Exception as e:
+        session.rollback()
+        err_console.print(f"[red]✗ Clean failed:[/red] {e}")
+        raise typer.Exit(1)
+    finally:
+        session.close()
 
 
 if __name__ == "__main__":

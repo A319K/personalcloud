@@ -17,7 +17,7 @@ from db.database import get_session
 from db.models import SyncedFile, FileEmbedding
 from api.services.storage import StorageService, StorageError
 from api.services.ocr import extract_text
-from api.services.embeddings import generate_embedding, store_embedding
+from api.services.embeddings import store_chunks
 
 router = APIRouter(prefix="/files", tags=["files"])
 
@@ -57,6 +57,47 @@ def list_files(db: Session = Depends(_get_db)) -> list[dict]:
         }
         for f in files
     ]
+
+
+@router.get("/{file_id}", summary="Get file detail")
+def get_file_detail(
+    file_id: int,
+    db: Session = Depends(_get_db),
+) -> dict:
+    """
+    Return detailed metadata and a text preview for a single synced file.
+
+    Used by the Swift menu bar app's quick preview panel. Returns file
+    metadata from synced_files plus the first 500 characters of extracted
+    text from file_embeddings.
+
+    Args:
+        file_id: Database ID of the SyncedFile to retrieve.
+
+    Returns:
+        A dict matching the FileDetail Swift struct.
+
+    Raises:
+        HTTPException 404: If the file_id does not exist.
+    """
+    file_record = db.query(SyncedFile).filter_by(id=file_id).first()
+    if not file_record:
+        raise HTTPException(status_code=404, detail=f"File with id={file_id} not found.")
+
+    text_preview = ""
+    if file_record.chunks:
+        # Concatenate first few chunks for a richer preview
+        combined = " ".join(c.extracted_text or "" for c in file_record.chunks[:3])
+        text_preview = combined[:500]
+
+    return {
+        "id": str(file_record.id),
+        "filename": file_record.filename,
+        "local_path": file_record.local_path,
+        "file_size": file_record.file_size,
+        "updated_at": file_record.updated_at.isoformat(),
+        "text_preview": text_preview,
+    }
 
 
 @router.delete("/{file_id}", summary="Delete a synced file")

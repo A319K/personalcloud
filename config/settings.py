@@ -45,6 +45,16 @@ class Settings:
         ).split(",")
     ]
 
+    # Paths to exclude from syncing and indexing (comma-separated directory names / patterns)
+    EXCLUDE_PATHS: list[str] = [
+        p.strip()
+        for p in os.getenv(
+            "EXCLUDE_PATHS",
+            "node_modules,.venv,venv,__pycache__,.git,dist,build,.next,.egg-info",
+        ).split(",")
+        if p.strip()
+    ]
+
     # API server
     API_HOST: str = os.getenv("API_HOST", "127.0.0.1")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
